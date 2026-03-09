@@ -55,6 +55,7 @@ type I18nKey =
   | "results.gaps"
   | "results.noStrengths"
   | "results.noGaps"
+  | "results.credibilityFlags"
   | "footer.terms"
   | "footer.copyright"
   | "terms.title"
@@ -135,6 +136,7 @@ const translations: Record<Locale, Record<I18nKey, string>> = {
     "results.gaps": "Gaps",
     "results.noStrengths": "No specific strengths listed.",
     "results.noGaps": "No explicit gaps detected.",
+    "results.credibilityFlags": "Credibility flags",
     "footer.terms": "Terms and Conditions",
     "footer.copyright": "© 2025 CV Match AI. All rights reserved.",
     "terms.title": "Terms and Conditions",
@@ -216,6 +218,7 @@ const translations: Record<Locale, Record<I18nKey, string>> = {
     "results.gaps": "Brechas",
     "results.noStrengths": "No se han listado fortalezas específicas.",
     "results.noGaps": "No se han detectado brechas explícitas.",
+    "results.credibilityFlags": "Alertas de credibilidad",
     "footer.terms": "Términos y Condiciones",
     "footer.copyright": "© 2025 CV Match AI. Todos los derechos reservados.",
     "terms.title": "Términos y Condiciones",

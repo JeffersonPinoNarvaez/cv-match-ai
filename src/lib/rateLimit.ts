@@ -23,11 +23,11 @@ const burstStore = new Map<string, Entry>();
 let circuitBreakerUntil = 0; // timestamp in ms when circuit breaker closes again
 
 function cleanup(store: Map<string, Entry>, now: number) {
-  for (const [key, entry] of store.entries()) {
+  store.forEach((entry, key) => {
     if (entry.resetAt <= now) {
       store.delete(key);
     }
-  }
+  });
 }
 
 function nowMs() {
