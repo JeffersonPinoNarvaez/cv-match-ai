@@ -28,13 +28,19 @@ export function useAnalysis() {
   const [rateLimitResetAt, setRateLimitResetAt] = useState<number | null>(null);
   const [fileStatuses, setFileStatuses] = useState<FileStatusMap>({});
   const [results, setResults] = useState<CVAnalysis[]>([]); // Results exist only in React state — never persisted
+  const [nextAllowedAnalysisAt, setNextAllowedAnalysisAt] = useState<number | null>(null);
+
+  // Cooldown duration between analyses per browser (in milliseconds)
+  const COOLDOWN_MS = 15_000;
 
   const hasJobDescription = jobDescription.trim().length >= 50;
 
-  const canAnalyze = useMemo(
-    () => hasJobDescription && files.length > 0 && status !== "analyzing",
-    [hasJobDescription, files.length, status]
-  );
+  const nowMs = Date.now();
+  const canAnalyze = useMemo(() => {
+    if (!hasJobDescription || files.length === 0 || status === "analyzing") return false;
+    if (nextAllowedAnalysisAt && nextAllowedAnalysisAt > Date.now()) return false;
+    return true;
+  }, [hasJobDescription, files.length, status, nextAllowedAnalysisAt]);
 
   const resetAll = useCallback(() => {
     setJobDescription("");
@@ -48,6 +54,12 @@ export function useAnalysis() {
 
   const analyze = useCallback(async () => {
     if (!canAnalyze) return;
+
+    // Optional hook for future bot-friction / captcha verification.
+    // e.g. await verifyHumanToken();
+
+    const startedAt = Date.now();
+    setNextAllowedAnalysisAt(startedAt + COOLDOWN_MS);
     setStatus("uploading");
     setError(null);
 
@@ -164,7 +176,7 @@ export function useAnalysis() {
         return next;
       });
     }
-  }, [canAnalyze, files, jobDescription, locale]);
+  }, [canAnalyze, files, jobDescription, locale, COOLDOWN_MS]);
 
   return {
     jobDescription,
@@ -174,6 +186,7 @@ export function useAnalysis() {
     status,
     error,
     rateLimitResetAt,
+    nextAllowedAnalysisAt,
     results,
     fileStatuses,
     analyze,

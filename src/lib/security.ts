@@ -20,6 +20,16 @@ export function validateEnvironment(): void {
   if (!apiKey.startsWith("gsk_")) {
     throw new Error("GROQ_API_KEY appears malformed (expected to start with 'gsk_').");
   }
+
+  // In production, require a strong, non-default IP_HASH_SALT for privacy-safe rate limiting.
+  if (process.env.NODE_ENV === "production") {
+    const salt = process.env.IP_HASH_SALT;
+    if (!salt || salt.length < 32 || salt === "change_me_in_production") {
+      throw new Error(
+        "IP_HASH_SALT must be set to a strong random value (>=32 chars) in production."
+      );
+    }
+  }
 }
 
 /**
@@ -27,7 +37,13 @@ export function validateEnvironment(): void {
  * Uses a configurable salt so hashes are environment-specific.
  */
 export function hashIP(ip: string): string {
-  const salt = process.env.IP_HASH_SALT || "change_me_in_production";
+  // In production validateEnvironment() guarantees a strong, non-default salt.
+  // In development we fall back to a static value to avoid noisy errors.
+  const salt =
+    process.env.IP_HASH_SALT ||
+    (process.env.NODE_ENV === "production"
+      ? "change_me_in_production"
+      : "dev_only_do_not_use_in_production");
   const hash = crypto.createHash("sha256").update(ip + salt).digest("hex");
   // First 32 chars are more than enough entropy for rate limiting keys
   return hash.slice(0, 32);
