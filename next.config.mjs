@@ -32,6 +32,12 @@ const nextConfig = {
   // Do not expose server source maps in production
   productionBrowserSourceMaps: false,
 
+  // Skip ESLint during production builds to avoid CLI option incompatibilities.
+  // You can still run `npm run lint` locally.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   async headers() {
     return [
       {

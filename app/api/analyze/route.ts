@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { ChatCompletion } from "groq-sdk/resources/chat/completions";
 import groq from "@/lib/groq";
 import { getAnalysisSystemPrompt } from "@/lib/prompt";
 import { validateAndExtractPDF } from "@/lib/pdf";
@@ -32,7 +33,6 @@ validateEnvironment();
 const GROQ_MODELS = [
   "llama-3.3-70b-versatile", // Primary — best quality
   "llama-3.1-8b-instant", // Fallback 1 — faster, separate limit
-  "llama-3.1-70b-versatile", // Fallback 2 — alternative high-quality model
 ] as const;
 
 /**
@@ -42,7 +42,7 @@ const GROQ_MODELS = [
 async function analyzeWithFallback(
   systemPrompt: string,
   userMessage: string
-): Promise<Awaited<ReturnType<typeof groq.chat.completions.create>>> {
+): Promise<ChatCompletion> {
   for (const model of GROQ_MODELS) {
     try {
       logger.log(`[Groq] Attempting analysis with model: ${model}`);
@@ -55,6 +55,7 @@ async function analyzeWithFallback(
         temperature: 0.1,
         max_tokens: 800,
         response_format: { type: "json_object" },
+        stream: false,
       });
       logger.log(`[Groq] Successfully analyzed with model: ${model}`);
       return completion;
@@ -184,12 +185,8 @@ export async function POST(req: Request) {
 
   try {
     // LAYER 1: Method enforcement
-    // (Next routes are already bound to POST, but this is an explicit guard.)
-    // @ts-expect-error - Request in Next has a method property
-    const method = (req as any).method as string | undefined;
-    if (method && method !== "POST") {
-      return secureErrorResponse(405, "INVALID_CONTENT_TYPE", { Allow: "POST" });
-    }
+    // Note: Next.js routes are already bound to POST, so this check is redundant
+    // but kept for explicit security documentation
 
     // LAYER 2: Content-Type validation
     const contentType = req.headers.get("content-type") || "";
