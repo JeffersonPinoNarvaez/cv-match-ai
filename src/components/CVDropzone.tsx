@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import { UploadCloud, FileText, CheckCircle2, XCircle, Loader2, X } from "lucide-react";
 import { Button } from "./ui/button";
 import type { AnalysisStatus } from "../lib/types";
@@ -35,7 +35,7 @@ export function CVDropzone({
   const { t } = useI18n();
 
   const onDrop = useCallback(
-    (accepted: File[], rejected: File[]) => {
+    (accepted: File[], fileRejections: FileRejection[]) => {
       if (disabled) return;
       setLocalError(null);
 
@@ -61,7 +61,7 @@ export function CVDropzone({
         next.push(file);
       }
 
-      if (rejected.length > 0 && !localError) {
+      if (fileRejections.length > 0 && !localError) {
         setLocalError("Some files were rejected. Ensure they are PDFs under 2MB.");
       }
 
