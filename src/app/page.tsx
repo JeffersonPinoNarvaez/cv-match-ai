@@ -21,6 +21,7 @@ export default function HomePage() {
     status,
     error,
     rateLimitResetAt,
+    nextAllowedAnalysisAt,
     results,
     fileStatuses,
     analyze,
@@ -36,6 +37,14 @@ export default function HomePage() {
       minutes === 1 ? "" : "s"
     }.`;
   }, [rateLimitResetAt]);
+
+  const cooldownMessage = useMemo(() => {
+    if (!nextAllowedAnalysisAt) return null;
+    const msRemaining = nextAllowedAnalysisAt - Date.now();
+    if (msRemaining <= 0) return null;
+    const seconds = Math.ceil(msRemaining / 1000);
+    return `You can run another analysis in ~${seconds}s (per-browser cooldown).`;
+  }, [nextAllowedAnalysisAt]);
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
@@ -129,6 +138,11 @@ export default function HomePage() {
                 {rateLimitMessage && (
                   <span className="text-xs" style={{ color: "var(--warning)" }}>
                     {rateLimitMessage}
+                  </span>
+                )}
+                {!rateLimitMessage && cooldownMessage && (
+                  <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                    {cooldownMessage}
                   </span>
                 )}
               </div>

@@ -33,7 +33,6 @@ validateEnvironment();
 const GROQ_MODELS = [
   "llama-3.3-70b-versatile", // Primary — best quality
   "llama-3.1-8b-instant", // Fallback 1 — faster, separate limit
-  "llama-3.1-70b-versatile", // Fallback 2 — alternative high-quality model
 ] as const;
 
 /**
