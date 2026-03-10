@@ -50,52 +50,22 @@ export async function validateAndExtractPDF(
     }
     logger.log("[PDF] Magic bytes validated successfully");
 
-    // Ensure minimal DOMMatrix polyfill for pdf.js when running in Node
-    // This is server-only and does not affect client bundles.
-    if (typeof (globalThis as any).DOMMatrix === "undefined") {
-      logger.log("[PDF] Installing minimal DOMMatrix polyfill for Node runtime");
-      class DOMMatrixPolyfill {
-        constructor(_init?: string | number[] | DOMMatrixInit) {
-          // no-op minimal implementation; pdf.js uses it mainly for existence/type
-        }
-      }
-      (globalThis as any).DOMMatrix = DOMMatrixPolyfill;
-    }
+    // Use unpdf — a serverless-friendly PDF text extractor built on pdfjs-dist.
+    // It ships a CJS-compatible build with no worker thread or browser API requirements,
+    // making it safe to use in Next.js API routes (both local dev and Vercel production).
+    logger.log("[PDF] Extracting text via unpdf...");
+    const { getDocumentProxy, extractText } = await import("unpdf");
 
-    // Use dynamic import to load pdf-parse
-    // pdf-parse is excluded from webpack bundling via next.config.mjs
-    logger.log("[PDF] Importing pdf-parse module...");
-    const pdfParseModule: any = await import("pdf-parse");
+    const uint8 = new Uint8Array(arrayBuffer);
+    const pdf = await getDocumentProxy(uint8);
+    logger.log("[PDF] PDF loaded. numPages:", pdf.numPages);
 
-    // Support both CJS and ESM shapes of pdf-parse:
-    // - Some builds expose PDFParse at top-level: module.PDFParse
-    // - Others expose it under the default export: module.default.PDFParse
-    const PDFParseCtor =
-      typeof pdfParseModule.PDFParse === "function"
-        ? pdfParseModule.PDFParse
-        : typeof pdfParseModule.default?.PDFParse === "function"
-        ? pdfParseModule.default.PDFParse
-        : null;
+    const { text: pages } = await extractText(pdf, { mergePages: false });
+    const fullText = Array.isArray(pages) ? pages.join("\n") : String(pages);
 
-    if (!PDFParseCtor) {
-      logger.error(
-        "[PDF] pdf-parse PDFParse constructor not found on module:",
-        pdfParseModule
-      );
-      return { error: "Internal PDF parser misconfiguration." };
-    }
+    logger.log("[PDF] Combined text length from all pages:", fullText.length);
 
-    logger.log("[PDF] Creating PDFParse instance with buffer...");
-    const parser = new PDFParseCtor({ data: buffer });
-    logger.log("[PDF] Parser instance created:", typeof parser);
-
-    // Text extracted from buffer in memory — never written to disk
-    logger.log("[PDF] Calling getText() on parser...");
-    const textResult = await parser.getText();
-    logger.log("[PDF] getText() completed, result type:", typeof textResult);
-    logger.log("[PDF] Text length:", textResult?.text?.length || 0);
-
-    const sanitized = sanitizeText(textResult.text || "");
+    const sanitized = sanitizeText(fullText || "");
     const truncatedText = truncateText(sanitized, MAX_TEXT_CHARS);
     const tooShort = truncatedText.length < MIN_TEXT_LENGTH;
 
@@ -123,4 +93,3 @@ export async function validateAndExtractPDF(
     };
   }
 }
-
