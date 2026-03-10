@@ -53,27 +53,35 @@ export async function validateAndExtractPDF(
     // Use dynamic import to load pdf-parse
     // pdf-parse is excluded from webpack bundling via next.config.mjs
     logger.log("[PDF] Importing pdf-parse module...");
-    const { PDFParse } = await import("pdf-parse");
-    logger.log("[PDF] PDFParse imported, type:", typeof PDFParse);
-    
-    if (typeof PDFParse !== 'function') {
-      logger.error("[PDF] PDFParse is not a constructor:", PDFParse);
-      return { error: "PDFParse is not a constructor - type: " + typeof PDFParse };
+    const pdfParseModule: any = await import("pdf-parse");
+
+    // Support both CJS and ESM shapes of pdf-parse:
+    // - Some builds expose PDFParse at top-level: module.PDFParse
+    // - Others expose it under the default export: module.default.PDFParse
+    const PDFParseCtor =
+      typeof pdfParseModule.PDFParse === "function"
+        ? pdfParseModule.PDFParse
+        : typeof pdfParseModule.default?.PDFParse === "function"
+        ? pdfParseModule.default.PDFParse
+        : null;
+
+    if (!PDFParseCtor) {
+      logger.error(
+        "[PDF] pdf-parse PDFParse constructor not found on module:",
+        pdfParseModule
+      );
+      return { error: "Internal PDF parser misconfiguration." };
     }
 
     logger.log("[PDF] Creating PDFParse instance with buffer...");
-    const parser = new PDFParse({ data: buffer });
+    const parser = new PDFParseCtor({ data: buffer });
     logger.log("[PDF] Parser instance created:", typeof parser);
 
     // Text extracted from buffer in memory — never written to disk
-    logger.log("[PDF] Calling getText()...");
+    logger.log("[PDF] Calling getText() on parser...");
     const textResult = await parser.getText();
     logger.log("[PDF] getText() completed, result type:", typeof textResult);
     logger.log("[PDF] Text length:", textResult?.text?.length || 0);
-    
-    logger.log("[PDF] Destroying parser...");
-    await parser.destroy();
-    logger.log("[PDF] Parser destroyed");
 
     const sanitized = sanitizeText(textResult.text || "");
     const truncatedText = truncateText(sanitized, MAX_TEXT_CHARS);
