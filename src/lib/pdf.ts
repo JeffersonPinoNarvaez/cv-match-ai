@@ -50,6 +50,18 @@ export async function validateAndExtractPDF(
     }
     logger.log("[PDF] Magic bytes validated successfully");
 
+    // Ensure minimal DOMMatrix polyfill for pdf.js when running in Node
+    // This is server-only and does not affect client bundles.
+    if (typeof (globalThis as any).DOMMatrix === "undefined") {
+      logger.log("[PDF] Installing minimal DOMMatrix polyfill for Node runtime");
+      class DOMMatrixPolyfill {
+        constructor(_init?: string | number[] | DOMMatrixInit) {
+          // no-op minimal implementation; pdf.js uses it mainly for existence/type
+        }
+      }
+      (globalThis as any).DOMMatrix = DOMMatrixPolyfill;
+    }
+
     // Use dynamic import to load pdf-parse
     // pdf-parse is excluded from webpack bundling via next.config.mjs
     logger.log("[PDF] Importing pdf-parse module...");
