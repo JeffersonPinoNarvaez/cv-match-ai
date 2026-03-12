@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useDropzone, type FileRejection } from "react-dropzone";
-import { UploadCloud, FileText, CheckCircle2, XCircle, Loader2, X } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle2, XCircle, Loader2, Clock, X } from "lucide-react";
 import { Button } from "./ui/button";
 import type { AnalysisStatus } from "../lib/types";
 import type { FileStatusMap } from "../hooks/useAnalysis";
@@ -16,10 +16,35 @@ interface CVDropzoneProps {
   status: AnalysisStatus;
   fileStatuses: FileStatusMap;
   hasJobDescription: boolean;
+  cooldownSeconds?: number;
 }
 
 const MAX_FILES = 10;
 const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+
+/** Maps raw server/validation error strings to friendly i18n keys. */
+function getFriendlyError(raw: string, t: (key: string) => string): string {
+  const r = raw.toLowerCase();
+  if (r.includes("groq") || r.includes("ai model") || r.includes("all groq"))
+    return t("error.groqFailed");
+  if (r.includes("pdf signature mismatch") || r.includes("not a valid pdf"))
+    return t("error.invalidPdfSignature");
+  if (r.includes("larger than 2mb") || r.includes("2 mb limit") || r.includes("2mb limit"))
+    return t("error.pdfTooLarge");
+  if (r.includes("too small to be a pdf") || r.includes("too small"))
+    return t("error.pdfTooSmall");
+  if (r.includes("pdf version") || r.includes("pdf header") || r.includes("unsupported pdf"))
+    return t("error.pdfVersion");
+  if (r.includes("parsing error") || r.includes("pdf parsing") || r.includes("corrupted"))
+    return t("error.pdfParse");
+  if (r.includes("extract text") || r.includes("extract sufficient") || r.includes("insufficient readable"))
+    return t("error.pdfExtract");
+  if (r.includes("network error") || r.includes("check your connection"))
+    return t("error.networkError");
+  if (r.includes("analysis failed") || r.includes("analysis error"))
+    return t("error.analysisFailed");
+  return raw; // unknown error — show as-is
+}
 
 export function CVDropzone({
   files,
@@ -29,6 +54,7 @@ export function CVDropzone({
   status,
   fileStatuses,
   hasJobDescription,
+  cooldownSeconds = 0,
 }: CVDropzoneProps) {
   const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -92,6 +118,7 @@ export function CVDropzone({
     name.length > max ? `${name.slice(0, max - 3)}...` : name;
 
   const isAnalyzing = status === "analyzing" || status === "uploading";
+  const isCoolingDown = cooldownSeconds > 0 && !isAnalyzing;
 
   const showEmptyState = files.length === 0 && !isAnalyzing;
 
@@ -166,6 +193,10 @@ export function CVDropzone({
             const key = `${file.name}-${index}`;
             const statusInfo = fileStatuses[key];
             const statusText = statusInfo?.message || "";
+            // Strip emoji prefix, then map raw error text to a friendly localized string
+            const rawLabel = statusText.replace(/[✅❌🤖📄⏳]/g, "").trim();
+            const isError = statusText.includes("❌") || statusInfo?.status === "error";
+            const displayLabel = isError ? getFriendlyError(rawLabel, t) : rawLabel;
             return (
               <div
                 key={key}
@@ -201,7 +232,7 @@ export function CVDropzone({
                             : "var(--text-tertiary)",
                         }}
                       >
-                        {statusText.replace(/[✅❌🤖📄⏳]/g, "").trim()}
+                        {displayLabel}
                       </span>
                     </div>
                   )}
@@ -224,27 +255,27 @@ export function CVDropzone({
 
       <Button
         type="button"
-        disabled={!hasJobDescription || files.length === 0 || isAnalyzing}
+        disabled={!hasJobDescription || files.length === 0 || isAnalyzing || isCoolingDown}
         onClick={onAnalyze}
         className="w-full h-11 rounded-xl font-semibold text-sm transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
-          backgroundColor: isAnalyzing || !hasJobDescription || files.length === 0
+          backgroundColor: isAnalyzing || isCoolingDown || !hasJobDescription || files.length === 0
             ? "var(--bg-elevated)"
             : "var(--accent)",
-          color: isAnalyzing || !hasJobDescription || files.length === 0
+          color: isAnalyzing || isCoolingDown || !hasJobDescription || files.length === 0
             ? "var(--text-tertiary)"
             : "var(--text-inverse)",
-          borderColor: isAnalyzing || !hasJobDescription || files.length === 0
+          borderColor: isAnalyzing || isCoolingDown || !hasJobDescription || files.length === 0
             ? "var(--border-subtle)"
             : "transparent",
         }}
         onMouseEnter={(e) => {
-          if (!isAnalyzing && hasJobDescription && files.length > 0) {
+          if (!isAnalyzing && !isCoolingDown && hasJobDescription && files.length > 0) {
             e.currentTarget.style.backgroundColor = "var(--accent-hover)";
           }
         }}
         onMouseLeave={(e) => {
-          if (!isAnalyzing && hasJobDescription && files.length > 0) {
+          if (!isAnalyzing && !isCoolingDown && hasJobDescription && files.length > 0) {
             e.currentTarget.style.backgroundColor = "var(--accent)";
           }
         }}
@@ -253,6 +284,11 @@ export function CVDropzone({
           <span className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
             {t("cv.analyzing")} {files.length} CV{files.length === 1 ? "" : "s"}...
+          </span>
+        ) : isCoolingDown ? (
+          <span className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            {t("cv.cooldownButton")} {cooldownSeconds}s
           </span>
         ) : (
           t("cv.analyze")
