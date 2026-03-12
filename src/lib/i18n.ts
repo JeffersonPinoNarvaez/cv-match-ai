@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 
 export type Locale = "en" | "es";
 
-type I18nKey =
+export type I18nKey =
   | "app.tagline"
   | "app.subtitle"
   | "theme.dark"
@@ -23,8 +23,19 @@ type I18nKey =
   | "cv.clientValidation"
   | "cv.analyzing"
   | "cv.analyze"
+  | "cv.cooldownButton"
+  | "cv.cooldownHint"
   | "cv.uploadLabel"
   | "error.rateLimit"
+  | "error.groqFailed"
+  | "error.invalidPdfSignature"
+  | "error.pdfTooLarge"
+  | "error.pdfTooSmall"
+  | "error.pdfVersion"
+  | "error.pdfParse"
+  | "error.pdfExtract"
+  | "error.analysisFailed"
+  | "error.networkError"
   | "results.overview"
   | "results.analyzed"
   | "results.none"
@@ -101,9 +112,29 @@ const translations: Record<Locale, Record<I18nKey, string>> = {
       "Client-side validation rejects non-PDFs, large files, and more than 10 CVs.",
     "cv.analyzing": "Analyzing…",
     "cv.analyze": "Analyze CVs",
+    "cv.cooldownButton": "Ready in",
+    "cv.cooldownHint": "Next analysis in",
     "cv.uploadLabel": "Upload CV PDFs",
     "error.rateLimit":
       "Too many requests. Try again in a few minutes. Rate limit is 10 analyses per hour.",
+    "error.groqFailed":
+      "The AI model is temporarily unavailable. Please wait a moment and try again.",
+    "error.invalidPdfSignature":
+      "This file is not a valid PDF. Check the file and re-upload it.",
+    "error.pdfTooLarge":
+      "File exceeds the 2 MB limit. Please compress or reduce the PDF size.",
+    "error.pdfTooSmall":
+      "This file appears to be empty. Please upload a valid PDF.",
+    "error.pdfVersion":
+      "This PDF version is not supported. Try re-saving or exporting the file as a standard PDF.",
+    "error.pdfParse":
+      "Could not read this PDF. It may be corrupted or password-protected.",
+    "error.pdfExtract":
+      "Could not extract text from this PDF. Make sure the file contains readable text (not just scanned images).",
+    "error.analysisFailed":
+      "Analysis failed. Please try again.",
+    "error.networkError":
+      "Network error — check your connection and try again.",
     "results.overview": "Analysis Overview",
     "results.analyzed": "CVs analyzed",
     "results.none": "No analyses yet",
@@ -183,9 +214,29 @@ const translations: Record<Locale, Record<I18nKey, string>> = {
       "La validación en el cliente rechaza no-PDFs, archivos grandes y más de 10 CVs.",
     "cv.analyzing": "Analizando…",
     "cv.analyze": "Analizar CVs",
+    "cv.cooldownButton": "Disponible en",
+    "cv.cooldownHint": "Próximo análisis en",
     "cv.uploadLabel": "Subir CVs en PDF",
     "error.rateLimit":
       "Demasiadas solicitudes. Vuelve a intentarlo en unos minutos. El límite es 10 análisis por hora.",
+    "error.groqFailed":
+      "El modelo de IA no está disponible temporalmente. Espera un momento e inténtalo de nuevo.",
+    "error.invalidPdfSignature":
+      "Este archivo no es un PDF válido. Verifica el archivo y vuelve a subirlo.",
+    "error.pdfTooLarge":
+      "El archivo supera el límite de 2 MB. Comprime o reduce el tamaño del PDF.",
+    "error.pdfTooSmall":
+      "Este archivo parece estar vacío. Sube un PDF válido.",
+    "error.pdfVersion":
+      "La versión de este PDF no es compatible. Intenta guardarlo o exportarlo como PDF estándar.",
+    "error.pdfParse":
+      "No se pudo leer este PDF. Puede estar dañado o protegido con contraseña.",
+    "error.pdfExtract":
+      "No se pudo extraer texto de este PDF. Asegúrate de que el archivo tiene texto legible (no solo imágenes escaneadas).",
+    "error.analysisFailed":
+      "El análisis falló. Por favor, inténtalo de nuevo.",
+    "error.networkError":
+      "Error de red — verifica tu conexión e inténtalo de nuevo.",
     "results.overview": "Resumen del análisis",
     "results.analyzed": "CVs analizados",
     "results.none": "Sin análisis todavía",

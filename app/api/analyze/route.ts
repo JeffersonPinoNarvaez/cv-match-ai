@@ -29,10 +29,14 @@ export const runtime = "nodejs";
 // Validate environment on module load (server-only)
 validateEnvironment();
 
-// Groq models ordered by preference (best quality first, fallbacks with separate rate limits)
+// Groq models ordered by preference (best quality first, each has its own rate limit pool)
+// Only models confirmed available in the Groq console as of Mar 2026.
 const GROQ_MODELS = [
-  "llama-3.3-70b-versatile", // Primary — best quality
-  "llama-3.1-8b-instant", // Fallback 1 — faster, separate limit
+  "llama-3.3-70b-versatile",               // Primary — best quality
+  "llama-3.1-8b-instant",                  // Fallback 1 — faster, separate limit
+  "meta-llama/llama-4-scout-17b-16e-instruct", // Fallback 2 — LLaMA 4, independent pool
+  "qwen/qwen3-32b",                        // Fallback 3 — Qwen family, different rate pool
+  "moonshotai/kimi-k2-instruct",           // Fallback 4 — Kimi family, another independent pool
 ] as const;
 
 /**
@@ -109,9 +113,10 @@ async function analyzeWithFallback(
     }
   }
 
-  // All models rate limited
+  // All models rate limited — use a message that isGroq429Error can detect
+  // so the circuit breaker is triggered and subsequent CVs fail fast
   throw new Error(
-    "All Groq models rate limited. Please try again later."
+    "rate_limit_exceeded: All Groq models rate limited. Please try again in a few minutes."
   );
 }
 
@@ -175,6 +180,7 @@ function isGroq429Error(error: unknown): boolean {
   return (
     msg.includes("rate limit reached") ||
     msg.includes("rate_limit_exceeded") ||
+    msg.includes("rate limited") ||
     msg.includes("429") ||
     (msg.includes("tokens per day") && msg.includes("Limit"))
   );
