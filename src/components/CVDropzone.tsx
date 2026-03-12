@@ -6,7 +6,7 @@ import { UploadCloud, FileText, CheckCircle2, XCircle, Loader2, Clock, X } from 
 import { Button } from "./ui/button";
 import type { AnalysisStatus } from "../lib/types";
 import type { FileStatusMap } from "../hooks/useAnalysis";
-import { useI18n } from "../lib/i18n";
+import { useI18n, type I18nKey } from "../lib/i18n";
 
 interface CVDropzoneProps {
   files: File[];
@@ -23,7 +23,7 @@ const MAX_FILES = 10;
 const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
 
 /** Maps raw server/validation error strings to friendly i18n keys. */
-function getFriendlyError(raw: string, t: (key: string) => string): string {
+function getFriendlyError(raw: string, t: (key: I18nKey) => string): string {
   const r = raw.toLowerCase();
   if (r.includes("groq") || r.includes("ai model") || r.includes("all groq"))
     return t("error.groqFailed");
