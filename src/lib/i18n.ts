@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 
 export type Locale = "en" | "es";
 
-type I18nKey =
+export type I18nKey =
   | "app.tagline"
   | "app.subtitle"
   | "theme.dark"
