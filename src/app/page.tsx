@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Linkedin, Clock } from "lucide-react";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { TermsModal } from "../components/TermsModal";
 import { JobDescriptionInput } from "../components/JobDescriptionInput";
@@ -11,7 +11,7 @@ import { useAnalysis } from "../hooks/useAnalysis";
 import { useI18n } from "../lib/i18n";
 
 export default function HomePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const {
     jobDescription,
@@ -21,7 +21,7 @@ export default function HomePage() {
     status,
     error,
     rateLimitResetAt,
-    nextAllowedAnalysisAt,
+    cooldownSeconds,
     results,
     fileStatuses,
     analyze,
@@ -33,18 +33,17 @@ export default function HomePage() {
     const msRemaining = rateLimitResetAt - Date.now();
     if (msRemaining <= 0) return null;
     const minutes = Math.ceil(msRemaining / 60000);
-    return `Too many requests. Try again in ~${minutes} minute${
-      minutes === 1 ? "" : "s"
-    }.`;
-  }, [rateLimitResetAt]);
+    return locale === "es"
+      ? `Demasiadas solicitudes. Reintenta en ~${minutes} minuto${minutes === 1 ? "" : "s"}.`
+      : `Too many requests. Try again in ~${minutes} minute${minutes === 1 ? "" : "s"}.`;
+  }, [rateLimitResetAt, locale]);
 
-  const cooldownMessage = useMemo(() => {
-    if (!nextAllowedAnalysisAt) return null;
-    const msRemaining = nextAllowedAnalysisAt - Date.now();
-    if (msRemaining <= 0) return null;
-    const seconds = Math.ceil(msRemaining / 1000);
-    return `You can run another analysis in ~${seconds}s (per-browser cooldown).`;
-  }, [nextAllowedAnalysisAt]);
+  // Live cooldown hint — driven by cooldownSeconds which ticks every 500ms in useAnalysis
+  const cooldownHint = cooldownSeconds > 0
+    ? locale === "es"
+      ? `${t("cv.cooldownHint")} ${cooldownSeconds}s`
+      : `${t("cv.cooldownHint")} ${cooldownSeconds}s`
+    : null;
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
@@ -140,9 +139,10 @@ export default function HomePage() {
                     {rateLimitMessage}
                   </span>
                 )}
-                {!rateLimitMessage && cooldownMessage && (
-                  <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-                    {cooldownMessage}
+                {!rateLimitMessage && cooldownHint && (
+                  <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-tertiary)" }}>
+                    <Clock className="h-3 w-3 shrink-0" />
+                    {cooldownHint}
                   </span>
                 )}
               </div>
@@ -155,6 +155,7 @@ export default function HomePage() {
                 status={status}
                 fileStatuses={fileStatuses}
                 hasJobDescription={jobDescription.trim().length >= 50}
+                cooldownSeconds={cooldownSeconds}
               />
 
               {error && (
@@ -214,10 +215,18 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-4">
             <p>{t("footer.copyright")}</p>
-            <span style={{ color: "var(--text-tertiary)" }}>·</span>
-            <p>
-              Powered by Groq
-            </p>
+            <a
+              href="https://www.linkedin.com/in/jefferson-pino-narvaez/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 transition-colors hover:underline"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}
+            >
+              <Linkedin className="h-3.5 w-3.5" />
+              Jefferson Pino
+            </a>
           </div>
         </footer>
       </div>

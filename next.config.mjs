@@ -1,32 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Exclude pdf-parse and pdfjs-dist from server-side bundling
-  // These packages are not compatible with webpack bundling
-  serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist"],
-
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      const originalExternals = config.externals || [];
-      config.externals = [
-        ...(Array.isArray(originalExternals)
-          ? originalExternals
-          : [originalExternals]),
-        ({ request }, callback) => {
-          if (!request) return callback(null);
-          if (request === "pdf-parse" || request.startsWith("pdf-parse/")) {
-            return callback(null, `commonjs ${request}`);
-          }
-          if (request === "pdfjs-dist" || request.startsWith("pdfjs-dist/")) {
-            return callback(null, `commonjs ${request}`);
-          }
-          if (typeof originalExternals === "function") {
-            return originalExternals({ request }, callback);
-          }
-          callback(null);
-        },
-      ];
-    }
-    return config;
+  // Tell Next.js (webpack) not to bundle these packages — let Node.js load them
+  // at runtime via its native module system. This is required for packages that
+  // ship ESM-only builds or that use native add-ons.
+  // In Next.js 14.x this lives under `experimental`. It moved to the top level
+  // (`serverExternalPackages`) in Next.js 15.
+  experimental: {
+    serverComponentsExternalPackages: ["unpdf"],
   },
 
   // Do not expose server source maps in production

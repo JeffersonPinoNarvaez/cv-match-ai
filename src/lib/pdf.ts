@@ -50,32 +50,22 @@ export async function validateAndExtractPDF(
     }
     logger.log("[PDF] Magic bytes validated successfully");
 
-    // Use dynamic import to load pdf-parse
-    // pdf-parse is excluded from webpack bundling via next.config.mjs
-    logger.log("[PDF] Importing pdf-parse module...");
-    const { PDFParse } = await import("pdf-parse");
-    logger.log("[PDF] PDFParse imported, type:", typeof PDFParse);
-    
-    if (typeof PDFParse !== 'function') {
-      logger.error("[PDF] PDFParse is not a constructor:", PDFParse);
-      return { error: "PDFParse is not a constructor - type: " + typeof PDFParse };
-    }
+    // Use unpdf — a serverless-friendly PDF text extractor built on pdfjs-dist.
+    // It ships a CJS-compatible build with no worker thread or browser API requirements,
+    // making it safe to use in Next.js API routes (both local dev and Vercel production).
+    logger.log("[PDF] Extracting text via unpdf...");
+    const { getDocumentProxy, extractText } = await import("unpdf");
 
-    logger.log("[PDF] Creating PDFParse instance with buffer...");
-    const parser = new PDFParse({ data: buffer });
-    logger.log("[PDF] Parser instance created:", typeof parser);
+    const uint8 = new Uint8Array(arrayBuffer);
+    const pdf = await getDocumentProxy(uint8);
+    logger.log("[PDF] PDF loaded. numPages:", pdf.numPages);
 
-    // Text extracted from buffer in memory — never written to disk
-    logger.log("[PDF] Calling getText()...");
-    const textResult = await parser.getText();
-    logger.log("[PDF] getText() completed, result type:", typeof textResult);
-    logger.log("[PDF] Text length:", textResult?.text?.length || 0);
-    
-    logger.log("[PDF] Destroying parser...");
-    await parser.destroy();
-    logger.log("[PDF] Parser destroyed");
+    const { text: pages } = await extractText(pdf, { mergePages: false });
+    const fullText = Array.isArray(pages) ? pages.join("\n") : String(pages);
 
-    const sanitized = sanitizeText(textResult.text || "");
+    logger.log("[PDF] Combined text length from all pages:", fullText.length);
+
+    const sanitized = sanitizeText(fullText || "");
     const truncatedText = truncateText(sanitized, MAX_TEXT_CHARS);
     const tooShort = truncatedText.length < MIN_TEXT_LENGTH;
 
@@ -103,4 +93,3 @@ export async function validateAndExtractPDF(
     };
   }
 }
-

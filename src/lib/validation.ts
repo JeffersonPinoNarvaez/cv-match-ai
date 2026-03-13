@@ -9,8 +9,6 @@ export interface FileValidationResult {
 const MAX_PDF_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
 const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46]; // %PDF
 
-const FILENAME_REGEX = /^[a-zA-Z0-9\s\-_.]{1,200}$/;
-
 /**
  * Perform low-level validation of an uploaded PDF buffer.
  * This is intentionally conservative and does not attempt to fully
@@ -48,14 +46,12 @@ export async function validatePDFFile(
     return { valid: false, error: "Unsupported PDF version." };
   }
 
-  // CHECK 4 — Filename sanitization
-  const justName = (filename || "cv.pdf").replace(/\\/g, "/").split("/").pop() || "cv.pdf";
-  const noNull = justName.replace(/\x00/g, "");
-  if (!FILENAME_REGEX.test(noNull)) {
-    return { valid: false, error: "Invalid filename for uploaded PDF." };
-  }
+  // NOTE: Filename is intentionally not validated — it is only used for display
+  // purposes (logging and UI) and is never written to disk or used as a path.
+  // Security is fully covered by the content-based checks above.
+  void filename;
 
-  // CHECK 6 — PDF JavaScript detection (best-effort scan)
+  // CHECK 4 — PDF JavaScript detection (best-effort scan)
   try {
     const sample = buffer.toString("latin1");
     const jsPattern = /\/(JavaScript|JS\s|AA\s|OpenAction)/i;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AnalysisStatus, CVAnalysis } from "../lib/types";
 import { useI18n } from "../lib/i18n";
 
@@ -20,7 +20,7 @@ export type FileStatusMap = Record<
 >;
 
 export function useAnalysis() {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const [jobDescription, setJobDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<AnalysisStatus>("idle");
@@ -29,18 +29,33 @@ export function useAnalysis() {
   const [fileStatuses, setFileStatuses] = useState<FileStatusMap>({});
   const [results, setResults] = useState<CVAnalysis[]>([]); // Results exist only in React state — never persisted
   const [nextAllowedAnalysisAt, setNextAllowedAnalysisAt] = useState<number | null>(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   // Cooldown duration between analyses per browser (in milliseconds)
   const COOLDOWN_MS = 15_000;
 
+  // Live ticker: counts down from COOLDOWN_MS to 0 every 500ms
+  useEffect(() => {
+    if (!nextAllowedAnalysisAt) {
+      setCooldownSeconds(0);
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.ceil((nextAllowedAnalysisAt - Date.now()) / 1000);
+      setCooldownSeconds(remaining > 0 ? remaining : 0);
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [nextAllowedAnalysisAt]);
+
   const hasJobDescription = jobDescription.trim().length >= 50;
 
-  const nowMs = Date.now();
   const canAnalyze = useMemo(() => {
     if (!hasJobDescription || files.length === 0 || status === "analyzing") return false;
-    if (nextAllowedAnalysisAt && nextAllowedAnalysisAt > Date.now()) return false;
+    if (cooldownSeconds > 0) return false;
     return true;
-  }, [hasJobDescription, files.length, status, nextAllowedAnalysisAt]);
+  }, [hasJobDescription, files.length, status, cooldownSeconds]);
 
   const resetAll = useCallback(() => {
     setJobDescription("");
@@ -114,13 +129,11 @@ export function useAnalysis() {
         const data = await res.json().catch(() => null);
         if (res.status === 429 && data?.resetAt) {
           setRateLimitResetAt(data.resetAt);
-          setError(
-            "Too many requests. Try again in a few minutes. Rate limit is 10 analyses per hour."
-          );
+          setError(t("error.rateLimit"));
         } else if (data?.error) {
           setError(String(data.error));
         } else {
-          setError("Analysis failed. Please try again.");
+          setError(t("error.analysisFailed"));
         }
         setStatus("error");
         setFileStatuses((prev) => {
@@ -128,7 +141,7 @@ export function useAnalysis() {
           Object.entries(prev).forEach(([key]) => {
             next[key] = {
               status: "error",
-              message: "❌ Analysis failed",
+              message: `❌ ${t("error.analysisFailed")}`,
             };
           });
           return next;
@@ -161,16 +174,14 @@ export function useAnalysis() {
         return next;
       });
     } catch {
-      setError(
-        "Analysis service temporarily unavailable. Please check your connection and try again."
-      );
+      setError(t("error.networkError"));
       setStatus("error");
       setFileStatuses((prev) => {
         const next: FileStatusMap = {};
         Object.entries(prev).forEach(([key]) => {
           next[key] = {
             status: "error",
-            message: "❌ Network error",
+            message: `❌ ${t("error.networkError")}`,
           };
         });
         return next;
@@ -187,6 +198,7 @@ export function useAnalysis() {
     error,
     rateLimitResetAt,
     nextAllowedAnalysisAt,
+    cooldownSeconds,
     results,
     fileStatuses,
     analyze,
