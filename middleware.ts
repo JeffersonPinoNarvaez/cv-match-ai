@@ -41,11 +41,11 @@ export function middleware(request: NextRequest) {
   const isDev = !isProd;
   const csp = [
     "default-src 'self'",
-    `script-src 'self' ${isDev ? "'unsafe-eval'" : ""} 'unsafe-inline'`.trim(),
+    `script-src 'self' ${isDev ? "'unsafe-eval'" : ""} 'unsafe-inline' https://va.vercel-scripts.com`.trim(),
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
-    "connect-src 'self' https://api.groq.com",
+    "connect-src 'self' https://api.groq.com https://vitals.vercel-insights.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

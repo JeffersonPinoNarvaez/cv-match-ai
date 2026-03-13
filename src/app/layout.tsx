@@ -3,6 +3,7 @@ import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "../app/globals.css";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { LanguageProvider } from "../components/LanguageProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <LanguageProvider>{children}</LanguageProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
